@@ -193,6 +193,23 @@ public class TamlValidator
                         Column = indentLevel + firstTabIndex + (valueStart - firstTabIndex) + tabInValueIndex + 1
                     });
                 }
+                
+                // 9. Check for invalid quote usage
+                if (value.Contains('"'))
+                {
+                    // Quotes are only valid as "" (empty string marker)
+                    if (value != "\"\"")
+                    {
+                        errors.Add(new ValidationError
+                        {
+                            LineNumber = lineNumber,
+                            ErrorType = ValidationErrorType.InvalidQuoteUsage,
+                            Message = "Quotes are only allowed as \"\"\" to represent empty strings. Regular values should not be quoted.",
+                            Column = indentLevel + firstTabIndex + (valueStart - firstTabIndex) + value.IndexOf('"') + 1,
+                            Severity = ValidationSeverity.Error
+                        });
+                    }
+                }
             }
             
             lineInfo.IsParent = false;
@@ -262,7 +279,8 @@ public enum ValidationErrorType
     TabInValue,
     EmptyKey,
     InvalidKeyFormat,
-    ParentWithValue
+    ParentWithValue,
+    InvalidQuoteUsage
 }
 
 /// <summary>

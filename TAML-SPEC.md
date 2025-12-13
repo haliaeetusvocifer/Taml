@@ -21,6 +21,27 @@ key			value
 ```
 All three examples above are equivalent. Multiple tabs can be used for visual alignment.
 
+#### Null and Empty Values
+
+**Null Values**: Use the tilde character `~` to represent a null value (absence of data):
+```
+key	~
+name	value
+optional_field	~
+```
+
+**Empty Strings**: Use two double-quote characters `""` to represent an empty string:
+```
+key	""
+name	value
+empty_field	""
+```
+
+TAML distinguishes between null (unknown/not applicable) and empty string (known to be empty):
+- `key\t~` → null value
+- `key\t""` → empty string value
+- `key\tvalue` → non-empty string value (no quotes needed)
+
 #### Nested Structures
 Children are indented with tabs. If a key has children, it has no value on the same line:
 ```
@@ -62,16 +83,19 @@ config
 3. **Line Breaks**: Each key-value pair on its own line
 4. **Parent Keys**: Keys with children have no value (just the key alone on the line)
 5. **Lists**: Just values indented one tab from their parent key (no special syntax)
-6. **No Quotes**: Values are literal strings (no escaping needed)
+6. **No Quotes (except for empty strings)**: Values are literal strings with no quotes or escaping needed. The only exception is `""` which represents an empty string value. Regular non-empty values never use quotes.
 7. **No Tabs in Content**: Keys and values cannot contain tab characters. Only the separator between key and value may contain tabs.
-8. **Comments**: Lines starting with `#` are ignored
+8. **Comments**: Lines starting with `#` are ignored. Mid-line comments are not supported - `#` characters within keys or values are treated as literal characters.
+9. **Null and Empty Values**: Use `~` to represent null values. Use `""` (two double-quote characters) to represent empty strings. These are semantically distinct values.
 
 ### Data Types
 
 TAML is intentionally simple. All values are strings by default. Parsers may interpret:
 - Numbers: `42`, `3.14`
 - Booleans: `true`, `false`
-- Null: `null`
+- Null: `~` (tilde character)
+- Empty String: `""` (two double-quote characters)
+- Non-empty String: any other text value (no quotes)
 
 ### Example Document
 
@@ -80,6 +104,7 @@ TAML is intentionally simple. All values are strings by default. Parsers may int
 application	MyApp
 version	1.0.0
 author	Developer Name
+license	~
 
 server
 	host	0.0.0.0
@@ -92,6 +117,7 @@ database
 		host	db.example.com
 		port	5432
 		database	myapp_db
+		password	~
 		
 features
 	user-authentication
@@ -161,14 +187,15 @@ A TAML document is **invalid** if it violates any of the following:
 **❌ Invalid:**
 ```taml
 server
-    host	localhost    # Spaces instead of tab
+    host	localhost
 	port	8080
 ```
+(Spaces used instead of tab for indentation)
 
 **✅ Valid:**
 ```taml
 server
-	host	localhost    # Tab for indentation
+	host	localhost
 	port	8080
 ```
 
@@ -179,14 +206,15 @@ server
 **❌ Invalid:**
 ```taml
 server
- 	host	localhost    # Space + tab
+ 	host	localhost
 	port	8080
 ```
+(Space + tab used for indentation)
 
 **✅ Valid:**
 ```taml
 server
-	host	localhost    # Pure tabs
+	host	localhost
 	port	8080
 ```
 
@@ -196,12 +224,13 @@ server
 
 **❌ Invalid:**
 ```taml
-server	name	localhost    # "server	name" is the key
+server	name	localhost
 ```
+(The key "server	name" contains a tab character)
 
 **✅ Valid:**
 ```taml
-server_name	localhost    # Use underscore or other character
+server_name	localhost
 ```
 
 **Rule:** Keys cannot contain tab characters. The first tab(s) after text define the key-value separator.
@@ -210,12 +239,13 @@ server_name	localhost    # Use underscore or other character
 
 **❌ Invalid:**
 ```taml
-message	Hello	World    # Value contains tab
+message	Hello	World
 ```
+(Value contains a tab character)
 
 **✅ Valid:**
 ```taml
-message	Hello World    # Use space instead
+message	Hello World
 ```
 
 **Rule:** Values cannot contain tab characters. Everything after the separator tabs until the line break is the value, but tabs within that content are invalid.
@@ -226,14 +256,15 @@ message	Hello World    # Use space instead
 ```taml
 server
 	host	localhost
-			port	8080    # Skips a level (3 tabs instead of 2)
+			port	8080
 ```
+(Skips a level - uses 3 tabs instead of 2)
 
 **✅ Valid:**
 ```taml
 server
 	host	localhost
-	port	8080    # Proper hierarchy
+	port	8080
 ```
 
 **Rule:** Each nesting level must increase indentation by exactly one tab. Skipping levels is invalid.
@@ -242,9 +273,10 @@ server
 
 **❌ Invalid:**
 ```taml
-server localhost    # Parent key with content but no tab separator
+server localhost
 	port	8080
 ```
+(Parent key has content but no tab separator)
 
 **✅ Valid:**
 ```taml
@@ -265,9 +297,10 @@ server	localhost
 **❌ Invalid:**
 ```taml
 items
-item1    # Not indented
+item1
 	item2
 ```
+(First item not indented)
 
 **✅ Valid:**
 ```taml
@@ -283,19 +316,20 @@ items
 **❌ Invalid:**
 ```taml
 name	value
-	orphan	value    # Indented but previous line has no children
+	orphan	value
 ```
+(Indented but previous line has no children)
 
 **✅ Valid:**
 ```taml
 name	value
-other	value    # Same level
+other	value
 ```
 
 **Or:**
 ```taml
 name
-	child	value    # Parent key, then children
+	child	value
 ```
 
 **Rule:** Indented lines must have a parent. You cannot increase indentation after a key-value pair unless the previous line was a parent key.
@@ -304,14 +338,15 @@ name
 
 **❌ Invalid:**
 ```taml
-	value    # No key, just indented value
+	value
 name	
 ```
+(First line has no key, second line has empty value)
 
 **✅ Valid:**
 ```taml
 parent
-	value    # This is a list item under 'parent'
+	value
 name	value
 ```
 
@@ -323,9 +358,10 @@ Depending on implementation, keys may be restricted:
 
 **Potentially Invalid (implementation-dependent):**
 ```taml
-server name	value    # Space in key
-my-key!	value    # Special character
+server name	value
+my-key!	value
 ```
+(Space in key, or special character in key)
 
 **Always Valid:**
 ```taml
@@ -334,6 +370,23 @@ my_key	value
 ```
 
 **Rule:** Keys should typically be identifiers (alphanumeric + underscore/hyphen). Spaces and special characters may be rejected by strict parsers.
+
+##### 11. Distinguishing Null from Empty String
+
+**Valid - Different semantic meanings:**
+```taml
+username	alice
+password	~
+nickname	""
+bio	Hello world
+```
+
+In this example:
+- `password\t~` means password is null (not set)
+- `nickname\t""` means nickname is an empty string (explicitly empty)
+- `bio\tHello world` is a regular string (no quotes)
+
+All three are valid but have different meanings that should be preserved during serialization/deserialization.
 
 ### Validation Error Types
 

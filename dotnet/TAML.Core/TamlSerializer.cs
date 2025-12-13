@@ -99,7 +99,7 @@ public class TamlSerializer
             WriteIndent(sb, indentLevel);
             sb.Append(name);
             sb.Append(Tab);
-            sb.Append("null");
+            sb.Append("~");
             sb.Append(NewLine);
             return;
         }
@@ -140,7 +140,7 @@ public class TamlSerializer
             if (item == null)
             {
                 WriteIndent(sb, indentLevel);
-                sb.Append("null");
+                sb.Append("~");
                 sb.Append(NewLine);
                 continue;
             }
@@ -181,6 +181,7 @@ public class TamlSerializer
     {
         return value switch
         {
+            string s when s == "" => "\"\"",  // Empty string becomes ""
             bool b => b ? "true" : "false",
             DateTime dt => dt.ToString("o"), // ISO 8601 format
             DateTimeOffset dto => dto.ToString("o"),
@@ -412,12 +413,12 @@ public class TamlSerializer
         {
             var line = lines[nextIndex];
             
-            // Stop if we're back to same or lower indent level
-            if (line.IndentLevel <= currentIndent)
+            // Stop if we're back to lower indent level
+            if (line.IndentLevel < currentIndent)
                 break;
             
-            // Only process items at the expected child level
-            if (line.IndentLevel == currentIndent + 1)
+            // Only process items at the current indent level (the collection items)
+            if (line.IndentLevel == currentIndent)
             {
                 if (IsPrimitiveType(elementType))
                 {
@@ -509,11 +510,16 @@ public class TamlSerializer
     
     private static object? ConvertValue(string? value, Type targetType)
     {
-        if (value == null || value == "null")
+        if (value == null || value == "null" || value == "~")
             return null;
         
         if (targetType == typeof(string))
+        {
+            // "" represents an empty string
+            if (value == "\"\"")
+                return "";
             return value;
+        }
         
         if (targetType == typeof(bool))
             return value.ToLower() == "true";

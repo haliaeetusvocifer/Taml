@@ -290,6 +290,210 @@ public class TamlValidatorTests
     
     #endregion
     
+    #region Null/Empty Value Tests
+    
+    [Fact]
+    public void GivenTamlWithTildeValue_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "name\t~\nage\t42";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithMultipleTildeValues_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "field1\t~\nfield2\tvalue\nfield3\t~\nfield4\t~";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenNestedTamlWithTildeValues_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "server\n\thost\tlocalhost\n\tpassword\t~\n\tport\t8080";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithTildeInList_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "items\n\tvalue1\n\t~\n\tvalue2\n\t~";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithTildeForNestedObject_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "parent\n\tchild\t~\n\tvalue\ttest";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithOnlyTilde_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "key\t~";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenComplexTamlWithMixedTildeValues_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "application\tMyApp\nversion\t1.0.0\nauthor\t~\nlicense\t~\n\nserver\n\thost\tlocalhost\n\tport\t8080\n\tpassword\t~\n\ndatabase\n\ttype\tpostgresql\n\tconnection\n\t\thost\tdb.example.com\n\t\tport\t5432\n\t\tpassword\t~\n\t\t\nfeatures\n\tauthentication\n\tapi-gateway\n\trate-limiting";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithEmptyStringValue_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "name\t\"\"\nage\t42";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithMultipleEmptyStrings_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "field1\t\"\"\nfield2\tvalue\nfield3\t\"\"\nfield4\t~";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenTamlWithQuotedNonEmptyValue_WhenValidating_ThenInvalid()
+    {
+        // Given
+        var taml = "name\t\"value\"";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(ValidationErrorType.InvalidQuoteUsage, result.Errors[0].ErrorType);
+        Assert.Equal(1, result.Errors[0].LineNumber);
+    }
+    
+    [Fact]
+    public void GivenTamlWithSingleQuote_WhenValidating_ThenInvalid()
+    {
+        // Given
+        var taml = "name\t\"";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(ValidationErrorType.InvalidQuoteUsage, result.Errors[0].ErrorType);
+    }
+    
+    [Fact]
+    public void GivenTamlWithThreeQuotes_WhenValidating_ThenInvalid()
+    {
+        // Given
+        var taml = "name\t\"\"\"";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.False(result.IsValid);
+        Assert.Single(result.Errors);
+        Assert.Equal(ValidationErrorType.InvalidQuoteUsage, result.Errors[0].ErrorType);
+    }
+    
+    [Fact]
+    public void GivenTamlWithEmptyStringAndNull_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "username\talice\npassword\t~\nnickname\t\"\"\nbio\tHello world";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    [Fact]
+    public void GivenNestedTamlWithEmptyStrings_WhenValidating_ThenIsValid()
+    {
+        // Given
+        var taml = "server\n\thost\tlocalhost\n\tpassword\t\"\"\n\tport\t8080";
+        
+        // When
+        var result = TamlValidator.Validate(taml);
+        
+        // Then
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+    
+    #endregion
+    
     #region Validation Result Tests
     
     [Fact]

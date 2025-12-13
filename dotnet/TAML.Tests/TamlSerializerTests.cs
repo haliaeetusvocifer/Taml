@@ -203,7 +203,7 @@ public class TamlSerializerTests
     }
     
     [Fact]
-    public void GivenObjectWithNullProperty_WhenSerializing_ThenReturnsNullValue()
+    public void GivenObjectWithNullProperty_WhenSerializing_ThenReturnsTildeValue()
     {
         // Given
         var obj = new SimpleObject
@@ -217,10 +217,264 @@ public class TamlSerializerTests
         var result = TamlSerializer.Serialize(obj);
         
         // Then
-        Assert.Contains("Name\tnull", result);
+        Assert.Contains("Name\t~", result);
+    }
+        [Fact]
+    public void GivenTamlWithTildeValue_WhenDeserializing_ThenReturnsNull()
+    {
+        // Given
+        var taml = "Name\t~\nAge\t25\nIsActive\ttrue";
+        
+        // When
+        var result = TamlSerializer.Deserialize<SimpleObject>(taml);
+        
+        // Then
+        Assert.NotNull(result);
+        Assert.Null(result.Name);
+        Assert.Equal(25, result.Age);
+        Assert.True(result.IsActive);
     }
     
-    #endregion
+    [Fact]
+    public void GivenMultipleNullProperties_WhenSerializing_ThenAllSerializeAsTilde()
+    {
+        // Given
+        var obj = new MultiNullObject
+        {
+            Field1 = null,
+            Field2 = "value",
+            Field3 = null,
+            Field4 = null
+        };
+        
+        // When
+        var result = TamlSerializer.Serialize(obj);
+        
+        // Then
+        Assert.Contains("Field1\t~", result);
+        Assert.Contains("Field2\tvalue", result);
+        Assert.Contains("Field3\t~", result);
+        Assert.Contains("Field4\t~", result);
+    }
+    
+    [Fact]
+    public void GivenTamlWithMultipleTildeValues_WhenDeserializing_ThenAllDeserializeAsNull()
+    {
+        // Given
+        var taml = "Field1\t~\nField2\tvalue\nField3\t~\nField4\t~";
+        
+        // When
+        var result = TamlSerializer.Deserialize<MultiNullObject>(taml);
+        
+        // Then
+        Assert.NotNull(result);
+        Assert.Null(result.Field1);
+        Assert.Equal("value", result.Field2);
+        Assert.Null(result.Field3);
+        Assert.Null(result.Field4);
+    }
+    
+    [Fact]
+    public void GivenListWithNullItems_WhenSerializing_ThenNullItemsSerializeAsTilde()
+    {
+        // Given
+        var obj = new NullableListContainer
+        {
+            Items = new List<string?> { "first", null, "third", null }
+        };
+        
+        // When
+        var result = TamlSerializer.Serialize(obj);
+        
+        // Then
+        Assert.Contains("Items\n", result);
+        Assert.Contains("\tfirst\n", result);
+        Assert.Contains("\t~\n", result);
+        Assert.Contains("\tthird\n", result);
+    }
+    
+    [Fact]
+    public void GivenTamlListWithTildeItems_WhenDeserializing_ThenDeserializesWithNulls()
+    {
+        // Given
+        var taml = "Items\n\tfirst\n\t~\n\tthird\n\t~";
+        
+        // When
+        var result = TamlSerializer.Deserialize<NullableListContainer>(taml);
+        
+        // Then
+        Assert.NotNull(result);
+        Assert.NotNull(result.Items);
+        Assert.Equal(4, result.Items.Count);
+        Assert.Equal("first", result.Items[0]);
+        Assert.Null(result.Items[1]);
+        Assert.Equal("third", result.Items[2]);
+        Assert.Null(result.Items[3]);
+    }
+    
+    [Fact]
+    public void GivenNestedObjectWithNullValue_WhenSerializing_ThenSerializesTilde()
+    {
+        // Given
+        var obj = new ParentObject
+        {
+            Name = "Parent",
+            Child = null
+        };
+        
+        // When
+        var result = TamlSerializer.Serialize(obj);
+        
+        // Then
+        Assert.Contains("Name\tParent\n", result);
+        Assert.Contains("Child\t~\n", result);
+    }
+    
+    [Fact]
+    public void GivenTamlWithTildeForNestedObject_WhenDeserializing_ThenDeserializesAsNull()
+    {
+        // Given
+        var taml = "Name\tParent\nChild\t~";
+        
+        // When
+        var result = TamlSerializer.Deserialize<ParentObject>(taml);
+        
+        // Then
+        Assert.NotNull(result);
+        Assert.Equal("Parent", result.Name);
+        Assert.Null(result.Child);
+    }
+    
+    [Fact]
+    public void GivenTildeValue_WhenRoundTripping_ThenPreservesNull()
+    {
+        // Given
+        var original = new SimpleObject
+        {
+            Name = null,
+            Age = 42,
+            IsActive = true
+        };
+        
+        // When
+        var serialized = TamlSerializer.Serialize(original);
+        var deserialized = TamlSerializer.Deserialize<SimpleObject>(serialized);
+        
+        // Then
+        Assert.NotNull(deserialized);
+        Assert.Null(deserialized.Name);
+        Assert.Equal(42, deserialized.Age);
+        Assert.True(deserialized.IsActive);
+        Assert.Contains("Name\t~", serialized);
+    }
+    
+    [Fact]
+    public void GivenEmptyString_WhenSerializing_ThenSerializesAsDoubleQuotes()
+    {
+        // Given
+        var obj = new SimpleObject
+        {
+            Name = "",
+            Age = 42,
+            IsActive = true
+        };
+        
+        // When
+        var result = TamlSerializer.Serialize(obj);
+        
+        // Then
+        // Empty string should be: "Name\t\"\"\n" (tab followed by "" then newline)
+        Assert.Contains("Name\t\"\"\n", result);
+        Assert.DoesNotContain("Name\t~", result);
+        Assert.Contains("Age\t42", result);
+    }
+    
+    [Fact]
+    public void GivenEmptyStringVsNull_WhenSerializing_ThenDifferentOutput()
+    {
+        // Given
+        var emptyObj = new SimpleObject { Name = "", Age = 1, IsActive = true };
+        var nullObj = new SimpleObject { Name = null, Age = 1, IsActive = true };
+        
+        // When
+        var emptyResult = TamlSerializer.Serialize(emptyObj);
+        var nullResult = TamlSerializer.Serialize(nullObj);
+        
+        // Then
+        Assert.Contains("Name\t\"\"\n", emptyResult); // Empty string with ""
+        Assert.Contains("Name\t~", nullResult);        // Null value with tilde
+        Assert.NotEqual(emptyResult, nullResult);
+    }
+    
+    [Fact]
+    public void GivenTamlWithDoubleQuotes_WhenDeserializing_ThenDeserializesAsEmptyString()
+    {
+        // Given - "" represents empty string
+        var taml = "Name\t\"\"\nAge\t42\nIsActive\ttrue";
+        
+        // When
+        var result = TamlSerializer.Deserialize<SimpleObject>(taml);
+        
+        // Then
+        Assert.NotNull(result);
+        Assert.Equal("", result.Name); // Should be empty string, not null
+        Assert.Equal(42, result.Age);
+        Assert.True(result.IsActive);
+    }
+    
+    [Fact]
+    public void GivenEmptyString_WhenRoundTripping_ThenPreservesEmptyString()
+    {
+        // Given
+        var original = new SimpleObject
+        {
+            Name = "",
+            Age = 42,
+            IsActive = true
+        };
+        
+        // When
+        var serialized = TamlSerializer.Serialize(original);
+        var deserialized = TamlSerializer.Deserialize<SimpleObject>(serialized);
+        
+        // Then
+        Assert.NotNull(deserialized);
+        Assert.Equal("", deserialized.Name);
+        Assert.Equal(42, deserialized.Age);
+        Assert.True(deserialized.IsActive);
+        Assert.Contains("Name\t\"\"", serialized);
+    }
+    
+    [Fact]
+    public void GivenThreeStateValues_WhenRoundTripping_ThenPreservesAllStates()
+    {
+        // Given - null, empty string, and non-empty string
+        var original = new MultiNullObject
+        {
+            Field1 = null,
+            Field2 = "",
+            Field3 = "value",
+            Field4 = null
+        };
+        
+        // When
+        var serialized = TamlSerializer.Serialize(original);
+        var deserialized = TamlSerializer.Deserialize<MultiNullObject>(serialized);
+        
+        // Then - all three states preserved
+        Assert.NotNull(deserialized);
+        Assert.Null(deserialized.Field1);           // null preserved
+        Assert.Equal("", deserialized.Field2);      // empty string preserved
+        Assert.Equal("value", deserialized.Field3); // value preserved
+        Assert.Null(deserialized.Field4);           // null preserved
+        
+        // Verify serialized format
+        Assert.Contains("Field1\t~", serialized);
+        Assert.Contains("Field2\t\"\"", serialized);
+        Assert.Contains("Field3\tvalue", serialized);
+        Assert.Contains("Field4\t~", serialized);
+    }
+        #endregion
     
     #region Collection Tests
     
@@ -530,6 +784,19 @@ public class TamlSerializerTests
         public string? Short { get; set; }
         public string? Very_long_key { get; set; }
         public string? Medium { get; set; }
+    }
+    
+    private class MultiNullObject
+    {
+        public string? Field1 { get; set; }
+        public string? Field2 { get; set; }
+        public string? Field3 { get; set; }
+        public string? Field4 { get; set; }
+    }
+    
+    private class NullableListContainer
+    {
+        public List<string?>? Items { get; set; }
     }
     
     #endregion
