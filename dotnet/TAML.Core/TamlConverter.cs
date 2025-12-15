@@ -45,8 +45,11 @@ public static class TamlConverter
         // Parse XML
         var doc = XDocument.Parse(xml);
         
+        if (doc.Root == null)
+            return string.Empty;
+        
         // Convert to an intermediate object structure
-        var obj = ConvertXElement(doc.Root!);
+        var obj = ConvertXElement(doc.Root);
         
         // Serialize to TAML
         return TamlSerializer.Serialize(obj);
