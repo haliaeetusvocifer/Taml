@@ -20,7 +20,7 @@ server
 		# Certificate path
 		cert	/etc/ssl/cert.pem
 
-# Comment with special characters: tabs	spaces  symbols!@#
+# Comment with special characters and symbols: spaces  symbols!@#$%
 database
 	type	postgres
 	# Connection details
