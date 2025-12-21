@@ -1,0 +1,39 @@
+name: .NET Tests
+
+on:
+  push:
+    paths:
+      - 'dotnet/**'
+    branches: [ main, develop ]
+  pull_request:
+    paths:
+      - 'dotnet/**'
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore dotnet/dotnet.sln
+    
+    - name: Build
+      run: dotnet build dotnet/dotnet.sln --no-restore --configuration Release
+    
+    - name: Test
+      run: dotnet test dotnet/TAML.Tests/TAML.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+    
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: '**/test-results.trx'
