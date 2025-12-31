@@ -40,6 +40,8 @@ features
 	logging
 ```
 
+Here's a video where I explain some of the ideas about TAML:  https://www.youtube.com/watch?v=wX5PMvSOVLk
+
 ## 🎯 Basic Syntax
 
 ### Key-Value Pairs
